@@ -6,14 +6,22 @@ handlebars = require 'gulp-handlebars'
 concat = require 'gulp-concat'
 declare = require 'gulp-declare'
 wrap = require 'gulp-wrap'
+path = require 'path'
+runSequence = require 'run-sequence'
+html2tpl = require 'gulp-html2tpl'
 
 errorHandler = (err) ->
 	console.log err
 
 config = {
-	sass: { from: 'public/stylesheets/**/*.sass', to: 'build/public/stylesheets' }
+	sass: { from: 'public/sass/**/*.sass', to: 'build/public/stylesheets' }
 
-	coffee: { from: 'public/javascripts/**/*.coffee', to: 'build/public/javascripts' }
+	coffee: { from: 'public/coffee/**/*.coffee', to: 'build/public/javascripts' }
+
+	js: { from: 'public/js/**/*.js', to: 'build/public/javascripts' }
+	css: { from: 'public/css/**/*.css', to: 'build/public/stylesheets' }
+	images: { from: 'public/images/**/*', to: 'build/public/images' }
+	fonts: { from: 'public/fonts/**/*', to: 'build/public/fonts' }
 
 	routes: { from: 'routes/**/*.coffee', to: 'build/routes' }
 
@@ -34,8 +42,8 @@ watcher = (task) ->
 			console.log 'run ' + evt.path
 			gulp.start task
 		
-	
-gulp.task 'compile:sass', ->
+	 
+gulp.task 'compile:sass', ->	
 	gulp.src(config.sass.from)
 	.pipe(sass({sourceComments: 'normal'}).on('error', errorHandler))
 	.pipe(gulp.dest(config.sass.to))
@@ -60,9 +68,17 @@ gulp.task 'compile:app', ->
 	.pipe(coffee({bare: true, sourcemap: true}).on('error', errorHandler))
 	.pipe(gulp.dest(config.app.to))
 
-gulp.task 'compile:views', ->
+gulp.task 'copy:views', ->
 	gulp.src(config.views.from)
 	.pipe(gulp.dest(config.views.to))
+
+gulp.task 'copy:images', ->
+	gulp.src(config.images.from)
+	.pipe(gulp.dest(config.images.to))
+
+gulp.task 'copy:fonts', ->
+	gulp.src(config.fonts.from)
+	.pipe(gulp.dest(config.fonts.to))
 
 gulp.task 'compile:jade', ->
 	gulp.src(config.jade.from)
@@ -71,18 +87,31 @@ gulp.task 'compile:jade', ->
 
 gulp.task 'compile:handlebars', ->
 	gulp.src(config.handlebars.from)
-	.pipe(handlebars())
-	.pipe(wrap('Handlebars.template(<%= contents %>)'))
-	.pipe(declare({
-		namespace: 'View.templates',
-		noRedeclare: true
-	}))
-	.pipe(concat('templates.js'))
+	.pipe(html2tpl('templates.js').on('error', errorHandler))
 	.pipe(gulp.dest(config.handlebars.to))
+	
+	#gulp.src(config.handlebars.from)
+	#.pipe(handlebars())
+	#.pipe(wrap('Handlebars.template(<%= contents %>)'))
+	#.pipe(declare({
+	#	namespace: 'View.templates',
+	#	noRedeclare: true
+	#}))
+	#.pipe(concat('templates.js'))
+	#.pipe(gulp.dest(config.handlebars.to))
+
+gulp.task 'copy:js', ->
+	gulp.src(config.js.from)
+	.pipe(gulp.dest(config.js.to))
+
+gulp.task 'copy:css', ->
+	gulp.src(config.css.from)
+	.pipe(gulp.dest(config.css.to))
+
 
 
 gulp.task 'default', ->
-	gulp.start 'compile:sass', 'compile:coffee', 'compile:routes', 'compile:app', 'compile:bin', 'compile:views', 'compile:jade', 'compile:handlebars'
+	runSequence 'compile:sass', 'compile:coffee', 'compile:routes', 'compile:app', 'compile:bin', 'copy:views', 'compile:jade', 'compile:handlebars', 'copy:js', 'copy:css', 'copy:images', 'copy:fonts'
 
 
 gulp.task 'watch:sass', ->
@@ -101,15 +130,27 @@ gulp.task 'watch:app', ->
 	gulp.watch config.app.from, watcher 'compile:app'
 
 gulp.task 'watch:views', ->
-	gulp.watch config.views.from, watcher 'compile:views'
+	gulp.watch config.views.from, watcher 'copy:views'
+
+gulp.task 'watch:images', ->
+	gulp.watch config.images.from, watcher 'copy:images'
+
+gulp.task 'watch:fonts', ->
+	gulp.watch config.fonts.from, watcher 'copy:fonts'
 
 gulp.task 'watch:jade', ->
 	gulp.watch config.jade.from, watcher 'compile:jade'
+
+gulp.task 'watch:js', ->
+	gulp.watch config.js.from, watcher 'copy:js'
+
+gulp.task 'watch:css', ->
+	gulp.watch config.css.from, watcher 'copy:css'
 
 gulp.task 'watch:handlebars', ->
 	gulp.watch config.handlebars.from, watcher 'compile:handlebars'
 
 gulp.task 'watch', ->
-	gulp.start 'watch:sass', 'watch:coffee', 'watch:routes', 'watch:bin', 'watch:app', 'watch:views', 'watch:jade', 'watch:handlebars'
+	gulp.start 'watch:sass', 'watch:coffee', 'watch:routes', 'watch:bin', 'watch:app', 'watch:views', 'watch:jade', 'watch:handlebars', 'watch:js', 'watch:css', 'watch:images', 'watch:fonts'
 		
 	
